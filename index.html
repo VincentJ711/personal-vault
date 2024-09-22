@@ -1,1 +1,73 @@
-what??
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive File Reader</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<h1>Google Drive File Reader</h1>
+<!--<div id="g_id_onload"-->
+<!--     data-scope="openid email profile https://www.googleapis.com/auth/drive.readonly"-->
+<!--     data-client_id="1069669482068-tg9l76ih76p7v8ooe632nmb3g6q64b6c.apps.googleusercontent.com"-->
+<!--     data-callback="handleCredentialResponse">-->
+<!--</div>-->
+<!--<div class="g_id_signin" data-type="standard"></div>-->
+<pre id="content"></pre>
+
+<script>
+
+    async function handleCredentialResponse(response) {
+        const credential = response.credential || response.access_token;
+        const userInfo = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+            headers: {
+                Authorization: `Bearer ${credential}`
+            }
+        });
+        const userData = await userInfo.json();
+        console.log(`Got cred: ${credential}`);
+        console.log('User data:', userData);
+        listFiles(credential);
+    }
+
+    async function listFiles(token) {
+        const FILE_ID = '1swbCLvvfl_wyB_LY2M9wqYAseI2Y_0_J'; // Replace with your file ID
+        try {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${FILE_ID}?alt=media`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const content = await response.text();
+            console.log('loaded ' + content);
+            document.getElementById('content').textContent = content;
+        } catch (error) {
+            console.error('Error loading file:', error);
+            document.getElementById('content').textContent = 'Error loading file.';
+        }
+    }
+
+    async function grabToken() {
+        try {
+            const tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: "1069669482068-tg9l76ih76p7v8ooe632nmb3g6q64b6c.apps.googleusercontent.com",
+                scope: "https://www.googleapis.com/auth/drive.readonly",
+                login_hint: 'vincentj711',
+                // prompt: "consent", // '' | 'none' | 'consent' | 'select_account'
+                callback: handleCredentialResponse
+            });
+
+            tokenClient.requestAccessToken();
+        } catch (e) {
+            setTimeout(grabToken, 1000);
+        }
+    }
+
+    grabToken();
+
+
+</script>
+</body>
+</html>
