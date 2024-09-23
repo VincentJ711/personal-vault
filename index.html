@@ -21,6 +21,14 @@
             padding: 8px;
             text-align: left;
         }
+        th {
+            background-color: #f2f2f2; /* Light gray background for header */
+            color: #000; /* Black text color */
+            padding: 8px;
+            text-align: left;
+            font-weight: bold; /* Make the header bold */
+            border: 1px solid #000;
+        }
         td {
             cursor: pointer;
         }
@@ -29,17 +37,20 @@
             width: 100%; /* Makes input and buttons stretch to full width */
             /*max-width: 400px; !* Optional: limits the width *!*/
         }
+        button {
+            background-color: #009688;
+        }
+        #load-btn {
+            background-color: #039BE5;
+        }
+        #submit-btn {
+            background-color: indianred;
+        }
         h2 {
             text-align: center;
         }
         #table-container {
             width: 100%;
-        }
-        #load-btn {
-            margin-bottom: 10px;
-        }
-        #submit-btn {
-            margin-top: 10px;
         }
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -50,8 +61,14 @@
 <div class="container">
     <input type="password" id="encryption-key" placeholder="Enter encryption key" />
     <button id="load-btn">Download + Decrypt</button>
-    <div id="table-container"></div>
     <button id="submit-btn">Encrypt + Upload</button>
+    <br>
+    <button id="add-row-btn">Add Row</button> <!-- Button to add a new row -->
+    <button id="add-column-btn">Add Column</button> <!-- Button to add a new column -->
+    <button id="purge-empty-btn">Purge Empty</button> <!-- Button to purge empty rows -->
+    <button id="sort-btn">Sort</button> <!-- Sort button -->
+    <br>
+    <div id="table-container"></div>
 </div>
 
 
@@ -192,9 +209,119 @@
         return encryptionKey;
     }
 
+    // Function to add a new row to the table
+    function addNewRow(array) {
+        if (!array || !array.length) {
+            window.alert('data empty, skipping adding new row');
+            return;
+        }
+        // const newRow = Array(array[0].length).fill('');
+        // array.push(newRow); // Add the new row to the array
+        // createTableFromArray(array, () => {
+        //     console.log('Table data updated:', array);
+        // });
+
+        const newRow = new Array(array[0].length).fill(''); // Fill with empty strings
+        array.splice(1, 0, newRow);
+
+        // Recreate the table to reflect the changes
+        createTableFromArray(array, () => {
+            console.log('Table data after adding a new row:', array);
+        });
+    }
+
+
+
+    function addNewColumn(array) {
+        if (!array || !array.length) {
+            window.alert('data empty, skipping adding new column');
+            return;
+        }
+
+        // Add a new empty cell to each row
+        for (let i = 0; i < array.length; i++) {
+            array[i].push('');
+        }
+
+        // Recreate the table with the updated array
+        createTableFromArray(array, () => {
+            console.log('Table data updated with new column:', array);
+        });
+    }
+
+    // Function to purge empty rows and empty columns
+    function purgeEmptyRowsAndColumns(array) {
+
+        if (!array || !array.length) {
+            window.alert('data not loaded');
+            return;
+        }
+        // Remove empty columns first
+        const numCols = array[0].length;
+
+        for (let colIndex = numCols - 1; colIndex >= 0; colIndex--) {
+            // Check if the column is empty by iterating through all rows in that column
+            let isEmptyColumn = array.every((row, rowIndex) => {
+                return !row[colIndex].trim();
+            });
+
+            if (isEmptyColumn) {
+                // Remove the column from each row, including the header
+                array.forEach(row => row.splice(colIndex, 1));
+            }
+        }
+
+        // Now, remove empty rows
+        for (let i = array.length - 1; i > 0; i--) {
+            if (array[i].every(cell => !cell.trim())) {
+                array.splice(i, 1);
+            }
+        }
+
+        // Recreate the table with the updated array
+        createTableFromArray(array, () => {
+            console.log('Table data after purging empty rows and columns:', array);
+        });
+    }
+
+    // Function to sort the given array by the first column in place
+    function sortByFirstColumn(array) {
+        // Sort the rows, skipping the first (header) row
+        for (let i = 1; i < array.length - 1; i++) {
+            for (let j = i + 1; j < array.length; j++) {
+                if (array[i][0] > array[j][0]) {
+                    // Swap rows using a temporary variable
+                    const temp = array[i]; // Store row i in temp
+                    array[i] = array[j];    // Assign row j to row i
+                    array[j] = temp;         // Assign temp (row i) to row j
+                }
+            }
+        }
+
+        // Recreate the table to reflect the changes
+        createTableFromArray(array, () => {
+            console.log('Table data after sorting:', array);
+        });
+    }
+
+    function csvToArray(csvText) {
+        // Split the CSV text into rows
+        const rows = csvText.trim().split('\n');
+
+        // Map each row into an array by splitting on commas
+        const result = rows.map(row => row.split(','));
+
+        return result;
+    }
+
+
 
     async function handleSubmit(array) {
-        // console.log('Submitting data:', array);
+        if (!array || !array.length) {
+            window.alert('Data not loaded! cant save.');
+            return;
+        }
+            // console.log('Submitting data:', array);
         const json = JSON.stringify(array, null, 2);
         const encryptionKey = getEncryptionKey();
         const encryptedString = CryptoJS.AES.encrypt(json, encryptionKey).toString();
@@ -205,20 +332,43 @@
         let array = [];
 
         document.getElementById('submit-btn').addEventListener('click', e => {
-            if (array.length > 0) {
-                handleSubmit(array);
-            }
+            handleSubmit(array);
         });
+
+        // Event listener for the "Add Row" button
+        document.getElementById('add-row-btn').addEventListener('click', () => {
+            addNewRow(array); // Adds a new row to the table
+        });
+
+        // Event listener for the "Add Column" button
+        document.getElementById('add-column-btn').addEventListener('click', () => {
+            addNewColumn(array); // Adds a new column to the table
+        });
+
+        // Event listener for the "Purge Empty Rows" button
+        document.getElementById('purge-empty-btn').addEventListener('click', () => {
+            purgeEmptyRowsAndColumns(array); // Purges empty rows from the table
+        });
+
+        // Event listener for the "Purge Empty Rows" button
+        document.getElementById('sort-btn').addEventListener('click', () => {
+            sortByFirstColumn(array); // Purges empty rows from the table
+        });
+
 
         document.getElementById('load-btn').addEventListener('click', async () => {
             const encryptionKey = getEncryptionKey();
             const encryptedString = await downloadFile();
+            const testing = false;
+            const testData = !testing ? undefined : [['hi']];
+
 
             try {
                 const decryptedString = CryptoJS.AES.decrypt(encryptedString, encryptionKey).toString(CryptoJS.enc.Utf8);
-                array = JSON.parse(decryptedString);
+                array = testData ? testData : JSON.parse(decryptedString);
             } catch (e) {
                 window.alert('invalid encryption key');
+                // array = testData ? testData : JSON.parse(decryptedString);
                 return;
             }
 
@@ -227,6 +377,7 @@
                 console.log(JSON.stringify(array, null, 2));
             });
         });
+
     }
 
     onStart();
